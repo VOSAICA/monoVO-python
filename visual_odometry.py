@@ -20,7 +20,8 @@ def featureTracking(image_ref, image_cur, px_ref):
     st = st.reshape(st.shape[0])
     kp1 = px_ref[st == 1]
     kp2 = kp2[st == 1]
-
+    print(kp1)
+    print(kp2)
     return kp1, kp2
 
 
