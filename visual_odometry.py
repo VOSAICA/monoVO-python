@@ -58,7 +58,6 @@ class VisualOdometry:
         self.data = {}
         self.device = torch.device(
             'cuda' if torch.cuda.is_available() else 'cpu')
-        # self.detector = cv2.FastFeatureDetector_create(threshold=25, nonmaxSuppression=True)
 
         self.detector = SuperpointDetector({
             'superpoint': {
@@ -121,7 +120,6 @@ class VisualOdometry:
         self.data = {**self.data, **self.detector(self.data)}
         self.px_ref = self.data['keypoints'][0].cpu().detach().numpy()
         self.data = {**{k + '0': v for k, v in self.data.items()}}
-        # self.px_ref = np.array([x.pt for x in self.px_ref], dtype=np.float32)
         self.frame_stage = STAGE_SECOND_FRAME
 
     @torch.no_grad()
@@ -141,7 +139,6 @@ class VisualOdometry:
                                                           focal=self.focal,
                                                           pp=self.pp)
         self.frame_stage = STAGE_DEFAULT_FRAME
-        # self.px_ref = self.px_cur
 
     @torch.no_grad()
     def processFrame(self, frame_id):
@@ -163,7 +160,6 @@ class VisualOdometry:
         if (absolute_scale > 0.1):
             self.cur_t = self.cur_t + absolute_scale * self.cur_R.dot(t)
             self.cur_R = R.dot(self.cur_R)
-        # self.px_ref = self.px_cur
 
     def update(self, img, frame_id):
         assert (

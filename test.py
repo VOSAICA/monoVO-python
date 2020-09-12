@@ -4,8 +4,8 @@ import cv2
 from visual_odometry import PinholeCamera, VisualOdometry
 
 cam = PinholeCamera(1241.0, 376.0, 718.8560, 718.8560, 607.1928, 185.2157)
-vo = VisualOdometry(cam,
-                    '/home/raoshi/Documents/datasets/KITTI_odometry_poses/00.txt')
+vo = VisualOdometry(
+    cam, '/home/raoshi/Documents/datasets/KITTI_odometry_poses/00.txt')
 
 traj = np.zeros((600, 600, 3), dtype=np.uint8)
 
