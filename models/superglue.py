@@ -228,7 +228,6 @@ class SuperGlue(nn.Module):
             self.config['weights']))
 
     def forward(self, data):
-        print("data:", data)
         """Run SuperGlue on a pair of keypoints and descriptors"""
         desc0, desc1 = data['descriptors0'], data['descriptors1']
         kpts0, kpts1 = data['keypoints0'], data['keypoints1']

@@ -61,35 +61,45 @@ class VisualOdometry:
         # self.detector = cv2.FastFeatureDetector_create(threshold=25, nonmaxSuppression=True)
 
         self.detector = SuperpointDetector({
-            'descriptor_dim': 256,
-            'nms_radius': 4,
-            'keypoint_threshold': 0.005,
-            'max_keypoints': -1,
-            'remove_borders': 4
+            'superpoint': {
+                'descriptor_dim': 256,
+                'nms_radius': 4,
+                'keypoint_threshold': 0.005,
+                'max_keypoints': -1,
+                'remove_borders': 4
+            }
         }).eval().to(self.device)
         self.tracker = SuperglueMatcher({
-            'descriptor_dim': 256,
-            'weights': 'indoor',
-            'keypoint_encoder': [32, 64, 128, 256],
-            'GNN_layers': ['self', 'cross'] * 9,
-            'sinkhorn_iterations': 100,
-            'match_threshold': 0.25
+            'superglue': {
+                'descriptor_dim': 256,
+                'weights': 'outdoor',
+                'keypoint_encoder': [32, 64, 128, 256],
+                'GNN_layers': ['self', 'cross'] * 9,
+                'sinkhorn_iterations': 100,
+                'match_threshold': 0.25
+            }
         }).eval().to(self.device)
 
         with open(annotations) as f:
             self.annotations = f.readlines()
 
-    def featureTracking(self, image_ref, image_cur, px_ref):
-        image_ref = frame2tensor(image_ref, self.device)
+    @torch.no_grad()
+    def featureTracking(self, image_ref, image_cur):
         image_cur = frame2tensor(image_cur, self.device)
-
-        kp2, st, err = cv2.calcOpticalFlowPyrLK(
-            image_ref, image_cur, px_ref, None,
-            **lk_params)  # shape: [k,2] [k,1] [k,1]
-        st = st.reshape(st.shape[0])
-        kp1 = px_ref[st == 1]
-        kp2 = kp2[st == 1]
-        return kp1, kp2
+        self.data['image1'] = image_cur
+        tempData = {**self.data, **self.tracker(self.data)}
+        kpts0 = tempData['keypoints0'][0].cpu().numpy()
+        kpts1 = tempData['keypoints1'][0].cpu().numpy()
+        matches = tempData['matches0'][0].cpu().numpy()
+        valid = matches > -1
+        mkpts0 = kpts0[valid]
+        mkpts1 = kpts1[matches[valid]]
+        self.data.clear()
+        self.data['image0'], self.data['keypoints0'] = tempData[
+            'image1'], tempData['keypoints1']
+        self.data['scores0'], self.data['descriptors0'] = tempData[
+            'scores1'], tempData['descriptors1']
+        return mkpts0, mkpts1
 
     def getAbsoluteScale(self,
                          frame_id):  # specialized for KITTI odometry dataset
@@ -105,18 +115,19 @@ class VisualOdometry:
         return np.sqrt((x - x_prev) * (x - x_prev) + (y - y_prev) *
                        (y - y_prev) + (z - z_prev) * (z - z_prev))
 
+    @torch.no_grad()
     def processFirstFrame(self):
-        data = {}
-        data['image'] = frame2tensor(self.new_frame, self.device)
-        data = {**data, **self.detector(data)}
-        print(data)
-        self.px_ref = data['keypoints'][0].cpu().detach().numpy()
+        self.data['image'] = frame2tensor(self.new_frame, self.device)
+        self.data = {**self.data, **self.detector(self.data)}
+        self.px_ref = self.data['keypoints'][0].cpu().detach().numpy()
+        self.data = {**{k + '0': v for k, v in self.data.items()}}
         # self.px_ref = np.array([x.pt for x in self.px_ref], dtype=np.float32)
         self.frame_stage = STAGE_SECOND_FRAME
 
+    @torch.no_grad()
     def processSecondFrame(self):
         self.px_ref, self.px_cur = self.featureTracking(
-            self.last_frame, self.new_frame, self.px_ref)
+            self.last_frame, self.new_frame)
         E, mask = cv2.findEssentialMat(self.px_cur,
                                        self.px_ref,
                                        focal=self.focal,
@@ -130,11 +141,12 @@ class VisualOdometry:
                                                           focal=self.focal,
                                                           pp=self.pp)
         self.frame_stage = STAGE_DEFAULT_FRAME
-        self.px_ref = self.px_cur
+        # self.px_ref = self.px_cur
 
+    @torch.no_grad()
     def processFrame(self, frame_id):
         self.px_ref, self.px_cur = self.featureTracking(
-            self.last_frame, self.new_frame, self.px_ref)
+            self.last_frame, self.new_frame)
         E, mask = cv2.findEssentialMat(self.px_cur,
                                        self.px_ref,
                                        focal=self.focal,
@@ -151,13 +163,7 @@ class VisualOdometry:
         if (absolute_scale > 0.1):
             self.cur_t = self.cur_t + absolute_scale * self.cur_R.dot(t)
             self.cur_R = R.dot(self.cur_R)
-        if (self.px_ref.shape[0] < kMinNumFeature):
-            data = {}
-            data['image'] = frame2tensor(self.new_frame, self.device)
-            data = {**data, **self.detector(data)}
-            self.px_cur = data['keypoints'][0].cpu().detach().numpy()
-            # self.px_cur = np.array([x.pt for x in self.px_cur], dtype=np.float32)
-        self.px_ref = self.px_cur
+        # self.px_ref = self.px_cur
 
     def update(self, img, frame_id):
         assert (
