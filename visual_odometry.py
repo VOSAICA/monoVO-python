@@ -55,6 +55,7 @@ class VisualOdometry:
         self.focal = cam.fx
         self.pp = (cam.cx, cam.cy)
         self.trueX, self.trueY, self.trueZ = 0, 0, 0
+        self.data = {}
         self.device = torch.device(
             'cuda' if torch.cuda.is_available() else 'cpu')
         # self.detector = cv2.FastFeatureDetector_create(threshold=25, nonmaxSuppression=True)
@@ -74,6 +75,7 @@ class VisualOdometry:
             'sinkhorn_iterations': 100,
             'match_threshold': 0.25
         }).eval().to(self.device)
+
         with open(annotations) as f:
             self.annotations = f.readlines()
 
