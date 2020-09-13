@@ -71,11 +71,11 @@ class VisualOdometry:
         self.tracker = SuperglueMatcher({
             'superglue': {
                 'descriptor_dim': 256,
-                'weights': 'outdoor',
+                'weights': 'indoor',
                 'keypoint_encoder': [32, 64, 128, 256],
                 'GNN_layers': ['self', 'cross'] * 9,
                 'sinkhorn_iterations': 100,
-                'match_threshold': 0.25
+                'match_threshold': 0.37
             }
         }).eval().to(self.device)
 

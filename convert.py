@@ -1,7 +1,7 @@
 from scipy.spatial.transform import Rotation as R
 
 groundtruth = open(
-    '/home/raoshi/Documents/datasets/KITTI_odometry_poses/10.txt', 'r')
+    '/home/raoshi/Documents/datasets/KITTI_odometry_poses/08.txt', 'r')
 converted = open("groundtruth.txt", 'w')
 temp = groundtruth.readline()
 i = 0
