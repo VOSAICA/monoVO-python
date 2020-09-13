@@ -1,2 +1,6 @@
 .vscode/*
-__pycache__
+__pycache__/*
+groundtruth.txt
+results.txt
+map.png
+models/__pycache__/*
