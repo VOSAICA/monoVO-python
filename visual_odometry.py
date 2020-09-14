@@ -62,8 +62,8 @@ class VisualOdometry:
         self.detector = SuperpointDetector({
             'superpoint': {
                 'descriptor_dim': 256,
-                'nms_radius': 4,
-                'keypoint_threshold': 0.005,
+                'nms_radius': 3,
+                'keypoint_threshold': 0.010,
                 'max_keypoints': -1,
                 'remove_borders': 4
             }
@@ -75,7 +75,7 @@ class VisualOdometry:
                 'keypoint_encoder': [32, 64, 128, 256],
                 'GNN_layers': ['self', 'cross'] * 9,
                 'sinkhorn_iterations': 100,
-                'match_threshold': 0.37
+                'match_threshold': 0.40
             }
         }).eval().to(self.device)
 
